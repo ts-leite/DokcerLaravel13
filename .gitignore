@@ -1,0 +1,24 @@
+
+# Configurações e segredos locais
+/.env
+/.env.*
+!/.env.example
+
+/app/.env
+/app/.env.*
+!/app/.env.example
+
+# Dependências e build de frontend
+/app/vendor/
+/app/node_modules/
+/app/public/build/
+
+# Logs e arquivos temporários
+/app/storage/logs/*
+!/app/storage/logs/.gitignore
+
+# IDE e sistema operacional
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
