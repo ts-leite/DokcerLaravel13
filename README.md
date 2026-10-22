@@ -1,88 +1,37 @@
 # Laravel Docker
 
-[![Docker](https://img.shields.io/badge/Docker-Containerização-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Laravel](https://img.shields.io/badge/Laravel-PHP_Framework-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
-[![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php&logoColor=white)](https://www.php.net/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+Ambiente de desenvolvimento Laravel com Docker Compose, PHP-FPM, Nginx, PostgreSQL e Node.js. Os serviços são executados em containers separados para facilitar a organização, a manutenção e a reprodução do ambiente.
 
-Ambiente de desenvolvimento Laravel utilizando Docker Compose, PHP-FPM, Nginx e PostgreSQL.
+## Tecnologias utilizadas
 
-O objetivo deste projeto é simplificar a criação e a execução de aplicações Laravel por meio de contêineres Docker, proporcionando um ambiente organizado, reproduzível e fácil de configurar.
+- **PHP 8.4-FPM** — execução da aplicação Laravel.
+- **Nginx 1.28** — servidor web e encaminhamento das requisições para o PHP-FPM.
+- **PostgreSQL 17** — banco de dados relacional.
+- **Node.js 22** — instalação das dependências do frontend e execução do Vite.
+- **Vite 8** — compilação dos arquivos CSS e JavaScript.
+- **Tailwind CSS 4** — estilização da interface.
+- **Docker Compose** — gerenciamento dos containers e da rede do projeto.
 
-## 📑 Sumário
-
-- [Tecnologias utilizadas](#-tecnologias-utilizadas)
-- [Arquitetura do projeto](#-arquitetura-do-projeto)
-- [Pré-requisitos](#-pré-requisitos)
-- [Instalação](#-instalação)
-- [Configuração do ambiente](#-configuração-do-ambiente)
-- [Executando a aplicação](#-executando-a-aplicação)
-- [Banco de dados e migrações](#-banco-de-dados-e-migrações)
-- [Comandos úteis](#-comandos-úteis)
-- [Persistência dos dados](#-persistência-dos-dados)
-- [Solução de problemas](#-solução-de-problemas)
-- [Segurança](#-segurança)
-
-## 🛠️ Tecnologias utilizadas
-
-| Tecnologia | Finalidade |
-|---|---|
-| [Docker](https://www.docker.com/) | Executar os serviços em contêineres isolados. |
-| [Docker Compose](https://docs.docker.com/compose/) | Gerenciar os serviços e suas configurações. |
-| [Laravel](https://laravel.com/) | Framework PHP da aplicação. |
-| [PHP-FPM](https://www.php.net/) | Processar o código PHP. |
-| [Nginx](https://nginx.org/) | Receber requisições HTTP e encaminhá-las ao PHP-FPM. |
-| [PostgreSQL](https://www.postgresql.org/) | Armazenar os dados da aplicação. |
-| [Composer](https://getcomposer.org/) | Gerenciar as dependências PHP. |
-
-## 🏗️ Arquitetura do projeto
-
-A aplicação utiliza três serviços principais:
-
-```text
-                 Navegador
-                     |
-                     v
-               localhost:8080
-                     |
-                     v
-              +-------------+
-              |    Nginx    |
-              +-------------+
-                     |
-                     v
-              +-------------+
-              | PHP-FPM /   |
-              |   Laravel   |
-              +-------------+
-                     |
-                     v
-              +-------------+
-              | PostgreSQL  |
-              +-------------+
-```
-
-Os serviços se comunicam por meio de uma rede Docker, permitindo que a aplicação acesse o banco de dados pelo nome do serviço, sem precisar expor a porta do PostgreSQL ao navegador.
-
-## 📁 Estrutura do projeto
+## Estrutura do projeto
 
 ```text
 laravel-docker/
+├── .env
 ├── .env.example
 ├── .gitignore
 ├── .dockerignore
 ├── Dockerfile
-├── compose.yaml
+├── compose.yml
 ├── README.md
-│
 ├── docker/
 │   └── nginx/
 │       └── default.conf
-│
 └── app/
+    ├── .env
     ├── .env.example
+    ├── package.json
+    ├── package-lock.json
     ├── artisan
-    ├── composer.json
     ├── app/
     ├── bootstrap/
     ├── config/
@@ -91,239 +40,85 @@ laravel-docker/
     ├── resources/
     ├── routes/
     ├── storage/
-    └── tests/
+    └── ...
 ```
 
-### Principais arquivos
+## Arquitetura dos containers
 
-- `compose.yaml`: define os serviços, a rede e os volumes do Docker.
-- `Dockerfile`: define como a imagem PHP da aplicação é construída.
-- `docker/nginx/default.conf`: configura o servidor Nginx.
-- `.env.example`: apresenta as variáveis necessárias ao Docker Compose.
-- `app/.env.example`: apresenta as variáveis necessárias ao Laravel.
-- `app/`: contém o código-fonte da aplicação Laravel.
-- `README.md`: documenta a instalação e o uso do projeto.
+| Serviço | Função | Porta |
+|---|---|---|
+| `nginx` | Recebe as requisições HTTP e encaminha para o PHP-FPM | `8080` no host → `80` no container |
+| `app` | Executa a aplicação Laravel com PHP-FPM | `9000`, interna |
+| `db` | Armazena os dados no PostgreSQL | `5432`, interna |
+| `node` | Instala dependências e compila os arquivos do frontend | Sem porta publicada |
 
-> Os arquivos `.env` reais são criados localmente e não devem ser enviados ao GitHub.
+Os serviços `app`, `nginx` e `db` compartilham a rede Docker `laravel_network`.
 
-## 📋 Pré-requisitos
+O serviço `node` também participa dessa rede e utiliza a pasta `app/` montada em `/var/www`. Ele é executado sob demanda, por meio de comandos `docker compose run --rm`, sem precisar permanecer em execução.
 
-Antes de começar, certifique-se de que possui:
+O banco de dados utiliza o volume persistente `postgres_data`, preservando os dados entre reinicializações dos containers.
 
-- [Git](https://git-scm.com/downloads) instalado.
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) com integração WSL 2, para Windows com WSL, ou Docker Engine e Docker Compose, para Linux.
-- Acesso ao repositório deste projeto.
+## Pré-requisitos
 
-Não é necessário instalar PHP, Composer, Nginx ou PostgreSQL diretamente no sistema operacional, desde que os serviços estejam configurados nos contêineres.
+Antes de iniciar, instale:
 
-## 🚀 Instalação
+- Docker Engine ou Docker Desktop com integração ao ambiente Linux/WSL.
+- Docker Compose v2.
+- Git.
+
+O Node.js não precisa estar instalado diretamente no sistema hospedeiro, pois é executado em um container separado.
+
+## Configuração do ambiente
 
 ### 1. Clone o repositório
 
-No terminal, execute:
-
 ```bash
 git clone URL_DO_REPOSITORIO
-```
-
-Entre na pasta do projeto:
-
-```bash
 cd laravel-docker
 ```
 
-Substitua `URL_DO_REPOSITORIO` pelo endereço real do repositório no GitHub.
+Substitua `URL_DO_REPOSITORIO` pelo endereço real do repositório.
 
-### 2. Crie o arquivo de ambiente do Docker
+### 2. Configure as variáveis do Docker Compose
 
-Na raiz do projeto, execute:
+Crie o arquivo de ambiente da raiz:
 
 ```bash
 cp .env.example .env
 ```
 
-Esse arquivo contém as variáveis utilizadas pelo Docker Compose.
+Edite `.env` e configure as variáveis necessárias para o Docker Compose, especialmente as credenciais do PostgreSQL.
 
-### 3. Crie o arquivo de ambiente do Laravel
+O valor de `POSTGRES_PASSWORD` deve ser definido antes de iniciar os containers. Não utilize senhas reais em arquivos de exemplo publicados no repositório.
 
-Execute:
+### 3. Configure o ambiente Laravel
+
+Crie o arquivo de ambiente da aplicação:
 
 ```bash
 cp app/.env.example app/.env
 ```
 
-Esse arquivo contém as configurações específicas da aplicação Laravel.
-
-## ⚙️ Configuração do ambiente
-
-### 1. Configure as variáveis do Docker
-
-Abra o arquivo `.env` da raiz e confira as variáveis utilizadas no `compose.yaml`.
-
-Exemplo ilustrativo:
+Edite `app/.env` e configure a conexão com o banco de dados:
 
 ```dotenv
-APP_UID=1000
-APP_GID=1000
-NGINX_PORT=8080
-
-POSTGRES_DB=laravel
-POSTGRES_USER=laravel
-POSTGRES_PASSWORD=altere_esta_senha
-```
-
-Os nomes e os valores devem corresponder à configuração real do projeto.
-
-Utilize uma senha própria no seu ambiente local.
-
-### 2. Configure o Laravel
-
-Abra o arquivo `app/.env` e configure as variáveis da aplicação.
-
-Exemplo:
-
-```dotenv
-APP_NAME=Laravel
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://localhost:8080
-
 DB_CONNECTION=pgsql
 DB_HOST=db
 DB_PORT=5432
 DB_DATABASE=laravel
 DB_USERNAME=laravel
-DB_PASSWORD=altere_esta_senha
+DB_PASSWORD=sua_senha
 ```
 
-Ajuste as credenciais para que correspondam às utilizadas pelo serviço PostgreSQL no arquivo `.env` da raiz.
+Os valores do banco de dados devem corresponder às variáveis configuradas no arquivo `.env` da raiz.
 
-**Importante:** dentro da rede Docker, o Laravel deve utilizar `DB_HOST=db`, considerando que `db` é o nome do serviço no `compose.yaml`. O endereço `localhost` dentro do contêiner apontaria para o próprio contêiner, e não para o banco de dados.
+O endereço `db` é o nome do serviço PostgreSQL dentro da rede Docker. Não utilize `localhost` como host do banco de dados a partir do container Laravel.
 
-### 3. Inicie os serviços
-
-Na raiz do projeto, execute:
+### 4. Inicie os containers
 
 ```bash
 docker compose up -d --build
 ```
-
-Esse comando constrói as imagens necessárias e inicia os serviços em segundo plano.
-
-Confira se os contêineres estão em execução:
-
-```bash
-docker compose ps
-```
-
-### 4. Gere a chave da aplicação
-
-Com o serviço `app` em execução, execute:
-
-```bash
-docker compose exec app php artisan key:generate
-```
-
-O comando gera uma chave de criptografia e atualiza o arquivo de ambiente utilizado pelo Laravel.
-
-Não compartilhe o valor de `APP_KEY` nem o publique no repositório.
-
-> Execute a geração da chave durante a configuração inicial. Não substitua uma chave já utilizada por uma aplicação com dados existentes sem avaliar as consequências.
-
-## 🌐 Executando a aplicação
-
-Depois de iniciar os serviços, abra o navegador no endereço:
-
-**[http://localhost:8080](http://localhost:8080)**
-
-Se a variável `NGINX_PORT` estiver configurada com outro valor, utilize a porta correspondente.
-
-Para acompanhar os registros dos serviços:
-
-```bash
-docker compose logs -f
-```
-
-Para interromper a visualização dos registros, pressione `Ctrl + C`. Isso não encerra os contêineres.
-
-## 🗄️ Banco de dados e migrações
-
-As migrações do Laravel definem a estrutura das tabelas do banco de dados.
-
-Para executar as migrações pendentes:
-
-```bash
-docker compose exec app php artisan migrate
-```
-
-Para verificar o estado das migrações:
-
-```bash
-docker compose exec app php artisan migrate:status
-```
-
-Antes de executar migrações, verifique se o PostgreSQL está em execução e se as credenciais estão corretas.
-
-> Em ambientes com dados importantes, faça backups antes de realizar alterações estruturais no banco de dados.
-
-## ⌨️ Comandos úteis
-
-Execute os comandos a seguir na raiz do projeto.
-
-### Docker Compose
-
-| Comando | Descrição |
-|---|---|
-| `docker compose up -d` | Inicia os serviços. |
-| `docker compose up -d --build` | Reconstrói as imagens e inicia os serviços. |
-| `docker compose ps` | Lista os serviços e seus estados. |
-| `docker compose logs -f` | Acompanha os registros em tempo real. |
-| `docker compose logs app` | Exibe os registros do serviço Laravel/PHP. |
-| `docker compose logs nginx` | Exibe os registros do Nginx. |
-| `docker compose logs db` | Exibe os registros do PostgreSQL. |
-| `docker compose restart` | Reinicia os serviços. |
-| `docker compose down` | Para e remove os contêineres e a rede criada pelo Compose. |
-
-### Laravel
-
-| Comando | Descrição |
-|---|---|
-| `docker compose exec app php artisan about` | Exibe informações sobre a aplicação. |
-| `docker compose exec app php artisan route:list` | Lista as rotas registradas. |
-| `docker compose exec app php artisan migrate:status` | Consulta o estado das migrações. |
-| `docker compose exec app php artisan config:clear` | Limpa o cache de configuração. |
-| `docker compose exec app php artisan cache:clear` | Limpa o cache da aplicação. |
-| `docker compose exec app composer install` | Instala as dependências PHP. |
-
-O comando `docker compose exec` executa uma instrução dentro de um contêiner que já está em execução.
-
-## 💾 Persistência dos dados
-
-O PostgreSQL utiliza um volume Docker denominado `postgres_data`, conforme a configuração do projeto.
-
-Isso permite manter os dados do banco mesmo quando os contêineres são removidos com:
-
-```bash
-docker compose down
-```
-
-Para iniciar o ambiente novamente:
-
-```bash
-docker compose up -d
-```
-
-**Atenção:** o comando abaixo pode remover os volumes e apagar os dados persistidos do banco:
-
-```bash
-docker compose down -v
-```
-
-Utilize-o somente se realmente quiser remover os volumes associados.
-
-## 🔧 Solução de problemas
-
-### A página não abre
 
 Verifique o estado dos serviços:
 
@@ -331,78 +126,219 @@ Verifique o estado dos serviços:
 docker compose ps
 ```
 
-Consulte os registros do Nginx e da aplicação:
+### 5. Configure a chave da aplicação
 
-```bash
-docker compose logs nginx app
-```
-
-Confira se a porta configurada em `NGINX_PORT` está correta e disponível.
-
-### Erro de conexão com o PostgreSQL
-
-Verifique:
-
-- Se o serviço `db` está em execução.
-- Se `DB_HOST=db` está definido em `app/.env`.
-- Se o banco, o usuário e a senha correspondem às configurações do PostgreSQL.
-- Se o banco já terminou sua inicialização.
-
-### Erro relacionado à `APP_KEY`
-
-Verifique se `APP_KEY` está definida corretamente em `app/.env`.
-
-Para gerar a chave durante a configuração inicial, com o serviço `app` em execução:
+Se `APP_KEY` ainda não estiver definida, gere uma chave para o ambiente local:
 
 ```bash
 docker compose exec app php artisan key:generate
 ```
 
-Depois, limpe o cache de configuração:
+Não execute esse comando desnecessariamente em uma aplicação já configurada: trocar a chave pode invalidar dados criptografados e sessões existentes.
 
-```bash
-docker compose exec app php artisan config:clear
-```
+### 6. Instale as dependências PHP
 
-### Erro de dependências PHP
-
-Se a pasta `vendor/` não existir, instale as dependências com:
+Caso a pasta `vendor` ainda não exista, instale as dependências do Composer:
 
 ```bash
 docker compose exec app composer install
 ```
 
-Esse comando exige que o serviço `app` esteja em execução e que o Composer esteja disponível no contêiner.
+### 7. Execute as migrações
 
-### Erro de permissões
+```bash
+docker compose exec app php artisan migrate
+```
 
-Se ocorrerem erros de permissão em `storage/` ou `bootstrap/cache/`, verifique o usuário configurado no contêiner e as permissões desses diretórios.
+Esse comando cria ou atualiza as tabelas definidas pelas migrações da aplicação.
 
-Evite utilizar `chmod -R 777` como solução padrão.
+## Frontend: Node.js, npm e Vite
 
-## 🔐 Segurança
+O Node.js está separado do container PHP. Isso mantém as ferramentas de frontend independentes das dependências necessárias para executar o Laravel.
 
-Este projeto destina-se inicialmente ao desenvolvimento local.
+O serviço `node` utiliza a imagem `node:22-alpine`, monta `./app` em `/var/www` e trabalha nesse diretório.
 
-Antes de utilizar a aplicação em produção:
+### Instalar as dependências
 
-- Nunca publique arquivos `.env` reais.
-- Não compartilhe senhas, tokens ou chaves privadas.
-- Mantenha os arquivos `.env.example` sem credenciais reais.
-- Desative `APP_DEBUG` em produção.
-- Configure HTTPS e permissões adequadas.
-- Planeje backups do banco de dados.
-- Revise as portas expostas e as configurações dos contêineres.
-- Utilize credenciais específicas e seguras para produção.
+Execute na raiz do projeto:
 
-Se alguma credencial real já tiver sido publicada no GitHub, removê-la do arquivo não é suficiente: a credencial deve ser substituída.
+```bash
+docker compose run --rm node npm install
+```
 
-## 📄 Licença
+Esse comando instala as dependências definidas no `app/package.json`, gera ou atualiza `app/package-lock.json` e disponibiliza os pacotes em `app/node_modules`.
 
-Se pretende permitir que outras pessoas utilizem, modifiquem ou distribuam este projeto, escolha e adicione uma licença apropriada.
+O arquivo `package-lock.json` deve ser versionado no Git para ajudar a reproduzir as versões instaladas. A pasta `node_modules` não deve ser enviada ao repositório.
 
-Sem uma licença, não presuma que terceiros têm autorização irrestrita para reutilizar o código.
+### Compilar os arquivos para produção
 
----
+```bash
+docker compose run --rm node npm run build
+```
 
-Desenvolvido para facilitar a criação de ambientes Laravel com Docker, tornando a configuração mais simples, organizada e reproduzível.
+O Vite gera os arquivos compilados em `app/public/build`.
+
+Essa compilação pode ser executada novamente sempre que houver alterações nos arquivos de frontend.
+
+### Modo de desenvolvimento
+
+O projeto também define o comando:
+
+```bash
+docker compose run --rm --service-ports node npm run dev
+```
+
+O servidor de desenvolvimento do Vite precisa estar configurado para escutar em `0.0.0.0` e ter sua porta `5173` publicada no serviço `node` do Compose para ser acessível pelo navegador do host.
+
+A configuração atual não publica essa porta. Portanto, o comando acima, sozinho, não garante que o servidor Vite possa ser acessado pelo navegador. Para usar atualização automática durante o desenvolvimento, ajuste a configuração do serviço e o `vite.config.js`.
+
+## Acessar a aplicação
+
+Com os containers iniciados, acesse:
+
+**http://localhost:8080**
+
+A porta externa é configurável pela variável `NGINX_PORT` no `.env` da raiz, cujo valor padrão é `8080`.
+
+## Comandos úteis
+
+### Gerenciar os containers
+
+```bash
+# Iniciar os serviços
+docker compose up -d
+
+# Reconstruir e iniciar
+docker compose up -d --build
+
+# Verificar os serviços
+docker compose ps
+
+# Consultar os logs
+docker compose logs -f
+
+# Consultar os logs de um serviço
+docker compose logs -f app
+
+# Parar os serviços
+docker compose down
+```
+
+O comando `docker compose down` não remove o volume persistente do banco de dados. Evite usar `docker compose down -v` se quiser preservar os dados.
+
+### Laravel e Artisan
+
+```bash
+# Verificar as migrações
+docker compose exec app php artisan migrate:status
+
+# Executar migrações
+docker compose exec app php artisan migrate
+
+# Limpar o cache de configuração
+docker compose exec app php artisan config:clear
+
+# Listar as rotas
+docker compose exec app php artisan route:list
+```
+
+### Node.js e Vite
+
+```bash
+# Conferir a versão do Node.js
+docker compose run --rm node node --version
+
+# Conferir a versão do npm
+docker compose run --rm node npm --version
+
+# Instalar dependências
+docker compose run --rm node npm install
+
+# Compilar o frontend
+docker compose run --rm node npm run build
+
+# Listar as dependências instaladas
+docker compose run --rm node npm ls --depth=0
+```
+
+## Persistência dos dados
+
+Os dados do PostgreSQL são armazenados no volume Docker `postgres_data`.
+
+Para listar os volumes:
+
+```bash
+docker volume ls
+```
+
+Para verificar os containers ativos:
+
+```bash
+docker ps
+```
+
+Os arquivos da aplicação são compartilhados com os containers por meio de volumes bind mount, permitindo editar o código no sistema hospedeiro.
+
+## Segurança e GitHub
+
+Os arquivos de ambiente reais podem conter senhas, tokens e chaves de criptografia. Eles não devem ser publicados no GitHub.
+
+Este projeto utiliza `.gitignore` e `.dockerignore` para excluir arquivos de ambiente e dependências locais. Antes de enviar alterações ao repositório, confira o estado do Git:
+
+```bash
+git status --short
+```
+
+Confira também se arquivos sensíveis já estão sendo rastreados:
+
+```bash
+git ls-files -- .env app/.env
+```
+
+Os arquivos `.env.example` podem ser versionados, desde que contenham apenas valores de exemplo e nenhuma credencial real.
+
+As pastas `vendor`, `node_modules` e `public/build` não precisam ser enviadas ao Git neste fluxo de trabalho. As dependências podem ser instaladas e o frontend compilado conforme descrito acima.
+
+## Solução de problemas
+
+### A aplicação não abre
+
+Verifique os containers e os logs:
+
+```bash
+docker compose ps
+docker compose logs -f nginx app
+```
+
+### Erro de conexão com o PostgreSQL
+
+Confira se o serviço `db` está saudável e se as variáveis de conexão do arquivo `app/.env` correspondem às credenciais configuradas na raiz.
+
+```bash
+docker compose ps
+docker compose logs db
+```
+
+### Alterações no frontend não aparecem
+
+Execute novamente a compilação:
+
+```bash
+docker compose run --rm node npm run build
+```
+
+Confirme se os arquivos foram gerados em `app/public/build`.
+
+### Dependências do Node.js com problemas
+
+Reinstale as dependências:
+
+```bash
+docker compose run --rm node npm install
+```
+
+Se o problema persistir, verifique as mensagens de erro antes de remover arquivos ou alterar versões de dependências.
+
+## Licença
+
+Defina a licença do projeto conforme a sua intenção de distribuição e reutilização.
