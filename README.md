@@ -188,9 +188,13 @@ O projeto também define o comando:
 docker compose run --rm --service-ports node npm run dev
 ```
 
-O servidor de desenvolvimento do Vite precisa estar configurado para escutar em `0.0.0.0` e ter sua porta `5173` publicada no serviço `node` do Compose para ser acessível pelo navegador do host.
+O servidor de desenvolvimento do Vite é executado no container `node` e disponibilizado na porta `5173` do host. A configuração em `app/vite.config.js` utiliza `host: '0.0.0.0'` para aceitar conexões externas ao container e `origin: 'http://localhost:5173'` para anunciar o endereço acessível pelo navegador.
 
-A configuração atual não publica essa porta. Portanto, o comando acima, sozinho, não garante que o servidor Vite possa ser acessado pelo navegador. Para usar atualização automática durante o desenvolvimento, ajuste a configuração do serviço e o `vite.config.js`.
+A configuração de CORS permite a origem `http://localhost:8080`, utilizada pelo Nginx para servir a aplicação Laravel.
+
+Com o comando acima em execução, acesse a aplicação em `http://localhost:8080`. O Vite fornece atualização automática (HMR) dos arquivos de frontend durante o desenvolvimento. Mantenha o terminal do Vite aberto enquanto estiver trabalhando.
+
+Para encerrar o servidor de desenvolvimento, pressione `Ctrl + C` no terminal em que ele está sendo executado.
 
 ## Acessar a aplicação
 
